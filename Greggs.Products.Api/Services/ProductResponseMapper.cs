@@ -14,15 +14,18 @@ public class ProductResponseMapper : IProductResponseMapper
         _exchangeRateProvider = exchangeRateProvider;
     }
 
-    public IEnumerable<ProductResponseDto> Map(IEnumerable<Product> products)
+    public IEnumerable<ProductResponseDto> Map(IEnumerable<Product> products, Currency currency)
     {
-        var rate = _exchangeRateProvider.GetGbpToEurRate();
+        var rate = currency == Currency.Eur ? _exchangeRateProvider.GetGbpToEurRate() : 0m;
 
         return products.Select(product => new ProductResponseDto
         {
             Name = product.Name,
-            PriceInPounds = product.PriceInPounds,
-            PriceInEuros = Math.Round(product.PriceInPounds * rate, 2, MidpointRounding.AwayFromZero)
+            Currency = currency,
+            PriceInPounds = currency == Currency.Gbp ? product.PriceInPounds : null,
+            PriceInEuros = currency == Currency.Eur
+                ? Math.Round(product.PriceInPounds * rate, 2, MidpointRounding.AwayFromZero)
+                : null
         });
     }
 }

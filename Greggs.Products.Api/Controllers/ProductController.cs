@@ -29,7 +29,7 @@ public class ProductController : ControllerBase
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public ActionResult<IEnumerable<ProductResponseDto>> Get(int pageStart = 0, int pageSize = 5)
+    public ActionResult<IEnumerable<ProductResponseDto>> Get(int pageStart = 0, int pageSize = 5, Currency? currency = null)
     {
         if (pageStart < 0 || pageSize < 1)
         {
@@ -41,7 +41,8 @@ public class ProductController : ControllerBase
             });
         }
 
+        var resolvedCurrency = currency ?? Currency.Gbp;
         var products = _productData.List(pageStart, pageSize);
-        return Ok(_productResponseMapper.Map(products));
+        return Ok(_productResponseMapper.Map(products, resolvedCurrency));
     }
 }

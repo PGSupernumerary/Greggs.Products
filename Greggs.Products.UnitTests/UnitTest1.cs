@@ -32,8 +32,9 @@ public class ProductControllerTests
 
         Assert.Single(items);
         Assert.Equal("Test Product", items[0].Name);
+        Assert.Equal(Currency.Gbp, items[0].Currency);
         Assert.Equal(1.25m, items[0].PriceInPounds);
-        Assert.Equal(1.39m, items[0].PriceInEuros);
+        Assert.Null(items[0].PriceInEuros);
     }
 
     [Fact]
@@ -71,6 +72,29 @@ public class ProductControllerTests
         var details = Assert.IsType<ProblemDetails>(badRequest.Value);
 
         Assert.Equal(400, details.Status);
+    }
+
+    [Fact]
+    public void Get_ReturnsEuroPrices_WhenRequested()
+    {
+        var expected = new List<Product>
+        {
+            new() { Name = "Test Product", PriceInPounds = 1.25m }
+        };
+        var dataAccess = new FakeProductAccess(expected);
+        var controller = new ProductController(
+            NullLogger<ProductController>.Instance,
+            dataAccess,
+            new ProductResponseMapper(new FixedRateProvider(1.11m)));
+
+        var result = controller.Get(0, 5, Currency.Eur);
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var items = Assert.IsAssignableFrom<IEnumerable<ProductResponseDto>>(okResult.Value).ToList();
+
+        Assert.Single(items);
+        Assert.Equal(Currency.Eur, items[0].Currency);
+        Assert.Null(items[0].PriceInPounds);
+        Assert.Equal(1.39m, items[0].PriceInEuros);
     }
 
     private sealed class FakeProductAccess : IDataAccess<Product>
