@@ -4,6 +4,7 @@ using System.Linq;
 using Greggs.Products.Api.Controllers;
 using Greggs.Products.Api.DataAccess;
 using Greggs.Products.Api.Models;
+using Greggs.Products.Api.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -19,19 +20,27 @@ public class ProductControllerTests
             new() { Name = "Test Product", PriceInPounds = 1.25m }
         };
         var dataAccess = new FakeProductAccess(expected);
-        var controller = new ProductController(NullLogger<ProductController>.Instance, dataAccess);
+        var controller = new ProductController(
+            NullLogger<ProductController>.Instance,
+            dataAccess,
+            new ProductResponseMapper(new FixedRateProvider(1.11m)));
 
         var result = controller.Get(0, 5).ToList();
 
         Assert.Single(result);
-        Assert.Equal(expected[0], result[0]);
+        Assert.Equal("Test Product", result[0].Name);
+        Assert.Equal(1.25m, result[0].PriceInPounds);
+        Assert.Equal(1.39m, result[0].PriceInEuros);
     }
 
     [Fact]
     public void Get_PassesPagingToDataAccess()
     {
         var dataAccess = new FakeProductAccess(Array.Empty<Product>());
-        var controller = new ProductController(NullLogger<ProductController>.Instance, dataAccess);
+        var controller = new ProductController(
+            NullLogger<ProductController>.Instance,
+            dataAccess,
+            new ProductResponseMapper(new FixedRateProvider(1.11m)));
 
         // Discard the result of this for the analyser. We do not need
         // the output, but we want to force enumeration.
@@ -57,6 +66,21 @@ public class ProductControllerTests
             PageStart = pageStart;
             PageSize = pageSize;
             return _result;
+        }
+    }
+
+    private sealed class FixedRateProvider : IExchangeRateProvider
+    {
+        private readonly decimal _rate;
+
+        public FixedRateProvider(decimal rate)
+        {
+            _rate = rate;
+        }
+
+        public decimal GetGbpToEurRate()
+        {
+            return _rate;
         }
     }
 }
